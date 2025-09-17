@@ -1,0 +1,81 @@
+# Excel files
+*.xlsx
+*.xls
+*.xlsm
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Data directories (containing Excel files)
+DATA/
+test_data/
+不整合データ/
+
+# Backup directories
+_bak/
+_error/
+_old/
+old/
+
+# Image files (if not needed in repo)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+
+# Document files
+*.docx
+*.doc
+*.pdf
+
+# CSV and JSON data files (uncomment if you want to exclude them)
+# *.csv
+# *.json
+
+# Text files with sensitive data (adjust as needed)
+# *.txt

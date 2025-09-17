@@ -1,0 +1,93 @@
+## 初期のインストール時
+pip install -r requirements.txt
+
+
+## 2025-06-21 HARV北九州個別テスト
+$env:MUNICIPALITY_NAME = "福岡県北九州市v4"
+$env:TARGET_PATH = "G:\共有ドライブ\k_40100_福岡県_北九州市_01\k_北九州市\99_共通\99_資料\02_返礼品関係\02_返礼品シート\企業名"
+python test_phase1_to_phase3_batch.py
+
+$env:MUNICIPALITY_NAME = "福岡県北九州市v4"
+$env:TARGET_PATH = "G:\共有ドライブ\k_40100_福岡県_北九州市_01\k_北九州市\99_共通\99_資料\02_返礼品関係\02_返礼品シート\企業名"
+python test_phase4.py
+
+$env:MUNICIPALITY_NAME = "福岡県北九州市v4"
+$env:TARGET_PATH = "G:\共有ドライブ\k_40100_福岡県_北九州市_01\k_北九州市\99_共通\99_資料\02_返礼品関係\02_返礼品シート\企業名"
+python test_phase5_to_phase6_batch.py
+
+$env:MUNICIPALITY_NAME = "福岡県北九州市v4"
+$env:TARGET_PATH = "G:\共有ドライブ\k_40100_福岡県_北九州市_01\k_北九州市\99_共通\99_資料\02_返礼品関係\02_返礼品シート\企業名"
+python test_phase7.py
+
+
+
+
+
+## 検証コマンド(2025-08-18 東追加分)
+$env:MUNICIPALITY_NAME = "テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\test_data"
+python test_phase1_to_phase3_batch.py
+
+$env:MUNICIPALITY_NAME = "テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\test_data"
+python test_phase4.py
+
+$env:MUNICIPALITY_NAME = "テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\test_data"
+python test_phase5_to_phase6_batch.py
+
+$env:MUNICIPALITY_NAME = "テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\test_data"
+python test_phase7.py
+
+## merge_product.py検証コマンド(2025-08-19 渡邉追加分)
+$env:MUNICIPALITY_NAME = "テスト自治体_merge"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\test_data"
+python merge_product.py
+
+
+
+
+
+## 不整合データ検証コマンド(2025-08-19 東追加分)
+$env:MUNICIPALITY_NAME = "不整合テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\不整合データ"
+python test_phase1_to_phase3_batch.py
+
+$env:MUNICIPALITY_NAME = "不整合テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\不整合データ"
+python test_phase4.py
+
+$env:MUNICIPALITY_NAME = "不整合テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\不整合データ"
+python test_phase5_to_phase6_batch.py
+
+$env:MUNICIPALITY_NAME = "不整合テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\不整合データ"
+python test_phase7.py
+
+## merge_product.py検証コマンド(2025-08-19 渡邉追加分)
+del G:\共有ドライブ\★OD\99_商品管理\DATA\Phase1\HARV\不整合テスト自治体\*.*
+del G:\共有ドライブ\★OD\99_商品管理\DATA\Phase2\HARV\不整合テスト自治体\*.*
+del G:\共有ドライブ\★OD\99_商品管理\DATA\Phase3\HARV\不整合テスト自治体\*.*
+rm G:\共有ドライブ\★OD\99_商品管理\DATA\Phase4\HARV\不整合テスト自治体.xlsx
+$env:MUNICIPALITY_NAME = "不整合テスト自治体"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\不整合データ"
+python merge_product.py
+
+
+## 手動マージ
+$env:MUNICIPALITY_NAME = "不整合テスト自治体v9"
+$env:TARGET_PATH = "G:\共有ドライブ\★OD\99_商品管理\不整合データ"
+python merge.py
+
+
+## 本番用 (2025-08-20 北九州)
+$env:MUNICIPALITY_NAME = "福岡県北九州市(本番)"
+$env:TARGET_PATH = "G:\共有ドライブ\k_40100_福岡県_北九州市_01\k_北九州市\99_共通\99_資料\02_返礼品関係\02_返礼品シート\企業名"
+python merge.py
+
+## 本番用 (2025-09-09 北九州)
+$env:MUNICIPALITY_NAME = "2025-09-09_福岡県北九州市"
+$env:TARGET_PATH = "G:\共有ドライブ\k_40100_福岡県_北九州市_01\k_北九州市\99_共通\99_資料\02_返礼品関係\02_返礼品シート\企業名"
+python merge.py
