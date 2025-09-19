@@ -576,288 +576,83 @@ from openpyxl import load_workbook, Workbook
 
 
 
-def normalize_header_text(text):
-    """
-    ヘッダーテキストの正規化（改行・空白の処理）
-    """
-    if not text:
-        return ""
-    text = str(text).strip()
-    # 改行、連続空白を除去
-    import re
-    text = re.sub(r'\s+', '', text)
-    return text
-
-def create_hierarchical_header(main_header, sub_header, col_index, header_col_start):
-    """
-    階層的ヘッダー構造から意味的ヘッダー名を生成
-    """
-    main_clean = normalize_header_text(main_header) if main_header else ""
-    sub_clean = normalize_header_text(sub_header) if sub_header else ""
-    
-    # 階層構造の処理
-    if main_clean and sub_clean and sub_clean not in ["必須", "任意"]:
-        return f"{main_clean}:{sub_clean}"
-    elif main_clean:
-        return main_clean
-    elif sub_clean and sub_clean not in ["必須", "任意"]:
-        return sub_clean
-    else:
-        # 空の場合は列位置で識別
-        col_relative = col_index - header_col_start + 1
-        return f"空列{col_relative}"
-
-def find_header_base_position(data):
-    """
-    動的にヘッダーの基準位置を検出
-    1. 「項目」とある行を検索
-    2. 「返礼品コード」がある列を検索
-    """
-    header_row_index = None
-    header_col_index = None
-    
-    # 「項目」とある行を検索
-    for i, row in enumerate(data):
-        if len(row) >= 2 and row[1] == "項目":
-            header_row_index = i
-            break
-    
-    if header_row_index is None:
-        return None, None
-    
-    # 「返礼品コード」がある列を検索（ヘッダー行内で）
-    for j, cell in enumerate(data[header_row_index]):
-        if cell and "返礼品コード" in str(cell):
-            header_col_index = j
-            break
-    
-    return header_row_index, header_col_index
-
-def extract_dynamic_headers(data, header_row_index, header_col_start):
-    """
-    動的にヘッダー構造を解析し、意味的ヘッダーを生成
-    """
-    if header_row_index is None or header_col_start is None:
-        return []
-    
-    main_row = data[header_row_index]
-    sub_row = data[header_row_index + 1] if header_row_index + 1 < len(data) else []
-    
-    dynamic_headers = []
-    max_col = max(len(main_row), len(sub_row))
-    
-    for col_idx in range(header_col_start, max_col):
-        main_header = main_row[col_idx] if col_idx < len(main_row) else None
-        sub_header = sub_row[col_idx] if col_idx < len(sub_row) else None
-        
-        # 階層的ヘッダー名を生成
-        header_name = create_hierarchical_header(main_header, sub_header, col_idx, header_col_start)
-        dynamic_headers.append({
-            'column_index': col_idx + 1,  # 1-based
-            'header_name': header_name
-        })
-    
-    return dynamic_headers
-
-def update_master_headers(master_headers, source_headers):
-    """
-    source_headers 内の各項目について、master_headers に
-    完全一致するものがなければ追加する。
-    （大文字小文字も含めた完全一致判定を行います）
-    """
-    for header in source_headers:
-        if header not in master_headers:
-            master_headers.append(header)
-    return master_headers
-
-
-
-def process_file(file_path, master_headers):
-    """
-    １ファイルを処理します（列ズレ0%対応版）。
-    
-    ・動的ヘッダー検出により、PAT別の構造差異を吸収
-    ・階層的ヘッダー（メイン+サブ）の意味的統合
-    ・位置に依存しない内容ベースのマッピング
-    """
-    wb = load_workbook(file_path, data_only=True)
-    ws = wb.active
-    max_row = ws.max_row
-    max_col = ws.max_column
-
-    # ワークシート全体の値を2次元リストにコピー
-    data = []
-    for row in ws.iter_rows(min_row=1, max_row=max_row, min_col=1, max_col=max_col):
-        data.append([cell.value for cell in row])
-
-    # 動的にヘッダー基準位置を検出
-    header_row_index, header_col_start = find_header_base_position(data)
-    
-    if header_row_index is None or header_col_start is None:
-        print(f"ファイル内にヘッダー基準位置が見つかりません: {os.path.basename(file_path)} → このファイルはスキップします。")
-        return [], master_headers
-
-    # 動的ヘッダー構造を解析
-    dynamic_headers = extract_dynamic_headers(data, header_row_index, header_col_start)
-    
-    # ソースヘッダーを抽出（意味的ヘッダー名）
-    source_headers = [header_info['header_name'] for header_info in dynamic_headers]
-    master_headers = update_master_headers(master_headers, source_headers)
-
-    # ヘッダー名 → 列インデックスのマッピングを作成
-    header_to_column = {header_info['header_name']: header_info['column_index'] 
-                       for header_info in dynamic_headers}
-
-    # データ行処理
-    output_rows = []
-    for row in data[header_row_index + 2:]:  # ヘッダー行+サブヘッダー行の次から
-        new_row = []
-        
-        # A列: 既存のファイル名を保持
-        existing_file_name = row[0] if len(row) > 0 and row[0] is not None else os.path.basename(file_path)
-        new_row.append(existing_file_name)
-        
-        # B列: 項目値
-        value_B = row[1] if len(row) > 1 else None
-        new_row.append(value_B)
-        
-        # C列以降: 意味的マッピングでデータを配置
-        for header in master_headers:
-            value = None
-            if header in header_to_column:
-                col_index = header_to_column[header]
-                actual_index = col_index - 1  # 1-based から 0-based
-                if 0 <= actual_index < len(row):
-                    value = row[actual_index]
-                    
-                    # 🔧 データクリーニング: 商品名列に人名が混入している場合の修正
-                    file_name = os.path.basename(file_path)
-                    if (file_name == "PAT0001_normalized.xlsx" and 
-                        "商品名" in header and value and '河瀨' in str(value)):
-                        value = None  # 商品名列から河瀨透を除去
-            
-            new_row.append(value)
-        
-        output_rows.append(new_row)
-
-    return output_rows, master_headers
+# Phase5で不要になった関数群は削除済み
 
 
 
 def process_phase5():
+    """
+    Phase5: Phase4で正規化済みの_normalized.xlsxファイルを直接統合
+    """
+    municipality = os.environ.get("MUNICIPALITY_NAME")
+    if not municipality:
+        print("MUNICIPALITY_NAME 環境変数が設定されていません。")
+        return
 
-  municipality = os.environ.get("MUNICIPALITY_NAME")
+    base_dir = os.path.join(
+        r'G:\共有ドライブ\★OD\99_商品管理\DATA\Phase3\HARV',
+        municipality
+    )
+    if not os.path.exists(base_dir):
+        print(f"指定フォルダが存在しません: {base_dir}")
+        return
 
-  if not municipality:
+    print(f"MUNICIPALITY_NAME = {municipality}")
+    print(f"処理対象フォルダ: {base_dir}")
 
-    print("MUNICIPALITY_NAME 環境変数が設定されていません。")
+    # normalized.xlsx ファイルのみを対象とする（重複正規化ファイルは除外）
+    files = [f for f in os.listdir(base_dir) 
+             if f.startswith("PAT") and f.endswith("_normalized.xlsx") 
+             and not f.endswith("_normalized_normalized.xlsx")]
 
-    return
+    if not files:
+        print("_normalized.xlsx ファイルが見つかりません。")
+        return
 
+    print(f"対象ファイル数: {len(files)}")
 
+    # 全ファイルのデータを直接統合
+    all_data = []
+    master_headers = None
 
-  base_dir = os.path.join(
+    for file in files:
+        file_path = os.path.join(base_dir, file)
+        try:
+            # Phase4で正規化済みのファイルを直接読み込み
+            df = pd.read_excel(file_path)
+            
+            if master_headers is None:
+                # 最初のファイルのヘッダーをマスターとして採用
+                master_headers = list(df.columns)
+                print(f"マスターヘッダー設定: {len(master_headers)}列")
+            
+            # データ行を追加（ヘッダー行は除く）
+            for _, row in df.iterrows():
+                # 各ファイルの列数をマスターに合わせて調整
+                row_data = []
+                for header in master_headers:
+                    if header in df.columns:
+                        row_data.append(row[header])
+                    else:
+                        row_data.append(None)  # 不足列は空値
+                all_data.append(row_data)
+            
+            print(f"処理完了: {file} ({len(df)}行)")
+            
+        except Exception as e:
+            print(f"エラー: {file} の処理に失敗しました → {e}")
 
-    r'G:\共有ドライブ\★OD\99_商品管理\DATA\Phase3\HARV',
+    if not all_data:
+        print("統合対象データがありません。")
+        return
 
-    municipality
-
-  )
-
-  if not os.path.exists(base_dir):
-
-    print(f"指定フォルダが存在しません: {base_dir}")
-
-    return
-
-
-
-  print(f"MUNICIPALITY_NAME = {municipality}")
-
-  print(f"処理対象フォルダ: {base_dir}")
-
-
-
-  # normalized.xlsx ファイルのみを対象とする（重複正規化ファイルは除外）
-  files = [f for f in os.listdir(base_dir) 
-           if f.startswith("PAT") and f.endswith("_normalized.xlsx") 
-           and not f.endswith("_normalized_normalized.xlsx")]
-
-  if not files:
-
-    print("_normalized.xlsx ファイルが見つかりません。")
-
-    return
-
-
-
-  # マスター集約用ワークブック作成（all_collect.xlsx）
-
-  master_wb = Workbook()
-
-  master_ws = master_wb.active
-
-  master_ws.title = "all_collect"
-
-  # 固定ヘッダー：A列＝ファイル名、B列＝項目
-
-  master_ws.cell(row=1, column=1, value="ファイル名")
-
-  master_ws.cell(row=1, column=2, value="項目")
-
-  # master_headers：C列以降の項目（Union したすべてのソースヘッダー）
-
-  master_headers = []
-
-  master_data_rows = [] # 各ファイルから抽出したデータ行を集約
-
-
-
-  for file in files:
-
-    file_path = os.path.join(base_dir, file)
-
-    try:
-
-      rows, master_headers = process_file(file_path, master_headers)
-
-      master_data_rows.extend(rows)
-
-      print(f"処理完了: {file}")
-
-    except Exception as e:
-
-      print(f"エラー: {file} の処理に失敗しました → {e}")
-
-
-
-  # マスターシートの1行目（固定ヘッダーに続くC列以降）に master_headers を設定
-
-  for i, header in enumerate(master_headers, start=3):
-
-    master_ws.cell(row=1, column=i, value=header)
-
-
-
-  # 集約したデータ行をマスターシートに書き出す（2行目以降）
-
-  current_row = 2
-
-  for row in master_data_rows:
-
-    for j, value in enumerate(row, start=1):
-
-      master_ws.cell(row=current_row, column=j, value=value)
-
-    current_row += 1
-
-
-
-  all_collect_path = os.path.join(base_dir, "all_collect.xlsx")
-
-  master_wb.save(all_collect_path)
-
-  print(f"all_collect.xlsx 作成完了: {all_collect_path}")
+    # 統合結果をall_collect.xlsxとして保存
+    result_df = pd.DataFrame(all_data, columns=master_headers)
+    all_collect_path = os.path.join(base_dir, "all_collect.xlsx")
+    result_df.to_excel(all_collect_path, index=False)
+    
+    print(f"all_collect.xlsx 作成完了: {all_collect_path}")
+    print(f"統合結果: {len(result_df)}行 × {len(master_headers)}列")
 
 import os
 import shutil
